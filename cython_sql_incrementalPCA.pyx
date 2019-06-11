@@ -77,10 +77,10 @@ def doaccess():
 
         for i in range(j):
         #   data[i] = json.loads(data[i])
-            data_output_view[i,0] = data[i]['zgsmzl_s']
-            data_output_view[i,1] = data[i]['xgxsm_s']
-            data_output_view[i,2] = data[i]['smwl_s']
-            data_output_view[i,2] = data[i]['btgnwl_s']
+            data_output_view[i,0] = data[i]['aaa']
+            data_output_view[i,1] = data[i]['bbb']
+            data_output_view[i,2] = data[i]['ccc']
+            data_output_view[i,2] = data[i]['ddd']
 
         model.partial_fit(data_output)
 
