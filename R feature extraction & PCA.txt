@@ -1,0 +1,85 @@
+# Ctrl + L 清屏
+library(readxl) # 读取,tibble格式，这是数据清洗包dplyr的专属格式
+# library(xlsx) # 包有错
+library(tibble) # 转成dataframe
+library(ggord)
+library(ggplot2)
+
+data_path <- "D:/R_analysis/*.xlsx"
+data <- read_excel(data_path)
+data <- as.data.frame(data)
+class(data) # 确认是否为R默认的dataframe格式
+data_backup <- data
+
+
+window <- 25
+num_para <- 7
+data$timestamp_1 <- NULL
+data_target <- data[c("feature1","feature2")]
+data_target <- subset(data_target,predicted_category == 1 | predicted_category == 6)
+indicator <- nrow(data_target) %/% window
+residual <- nrow(data_target) %% window
+
+var_names <- c("feature1_均值","feature2_均值","predicted category","time_stamp")
+
+# 结果存储变量初始化
+data_output <- data.frame(row.names = seq(1,indicator-1,1))
+for(i in 1:length(var_names)){
+    data_output <- cbind(data_output,0)
+}
+colnames(data_output) <- var_names
+
+# 获得所有窗口参数值
+for(i in 1:(indicator - 1)){  
+    iterator <- 0 # 用于定位变量计算特征量
+    temp1 <- i * window + 1
+    temp2 <- (i + 1) * window
+    for(j in 1:(ncol(data_target)-2)){
+        data_temp <- data_target[temp1:temp2,j]
+        data_temp <- as.matrix(data_temp)
+        temp3 <- iterator * num_para # 用于定位变量计算特征量
+        iterator <- iterator + 1
+        # 参数1 均值       
+        data_output[i,temp3 + 1] <- apply(data_temp, 2, mean)
+    }
+    data_output[i,ncol(data_output) - 1] <- data_target[temp2,ncol(data_target) - 1]
+    data_output[i,ncol(data_output)] <- data_target[temp2,ncol(data_target)]
+}
+
+# 做PCA，导出信息，并做整理
+data_temp <- data_output
+data_output$stage_potential <- NULL
+data_output$time_stamp <- NULL
+data_output_norm <- as.data.frame(scale(data_output, center=TRUE, scale= TRUE))
+df_pr <- prcomp(data_output_norm, scale=TRUE)
+plot(df_pr, type = "l") # 画碎石图，确定latent数量
+data_output_norm <- df_pr[["x"]]
+data_output_norm <- as.data.frame(cbind(data_output_norm, data_temp$stage_potential))
+names(data_output_norm)[ncol(data_output_norm)] <- "predicted category"
+data_output_norm <- as.data.frame(cbind(data_output_norm, data_temp$time_stamp)) # TBD 输出似乎有错误，单独用data_output_norm$time_stamp有错，结果为NULL
+names(data_output_norm)[ncol(data_output_norm)] <- "time_stamp"
+
+# PCA绘图
+pca_group <- factor(data_temp$stage_potential)
+p1 <- ggord(df_pr,pca_group,arrow = NULL, txt = NULL)
+p1 <- ggord(df_pr,axes = c("1","4"),grp_in = pca_group,arrow = NULL, txt = NULL)  # 换轴
+p1
+
+
+
+# 输出时间和状态标记
+# data_output_norm <- cbind(data_output_norm, data_temp$stage_potential)
+# data_output_norm <- cbind(data_output_norm, data_temp$time_stamp)
+
+
+# 输出
+write.table(data_output_norm, file="D:/R_analysis/result.csv", sep=",")
+
+
+# 可视化 ggord 主成分可视化
+# http://www.360doc.com/content/19/0108/21/52645714_807554210.shtml
+
+
+
+
+
